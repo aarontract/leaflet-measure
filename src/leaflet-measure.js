@@ -23,9 +23,11 @@ L.Control.Measure = L.Control.extend({
   options: {
     units: {},
     position: 'topright',
-    primaryLengthUnit: 'feet',
-    secondaryLengthUnit: 'miles',
-    primaryAreaUnit: 'acres',
+    enableInfoWindows: false,
+    primaryLengthUnit: 'meters',
+    secondaryLengthUnit: 'kilometers',
+    primaryAreaUnit: 'sqmeters',
+    secondaryAreaUnit: 'hectares',
     activeColor: '#ABE67E',     // base color for map features while actively measuring
     completedColor: '#C8F2BE',  // base color for permenant features generated from completed measure
     popupOptions: {             // standard leaflet popup options http://leafletjs.com/reference.html#popup-options
@@ -52,7 +54,7 @@ L.Control.Measure = L.Control.extend({
   },
   _initLayout: function () {
     var className = this._className, container = this._container = L.DomUtil.create('div', className);
-    var $toggle, $start, $cancel, $finish;
+    var $toggle, $start, $start2, $clear, $cancel, $finish, $resetfunction;
 
     container.innerHTML = controlTemplate({
       model: {
@@ -73,14 +75,20 @@ L.Control.Measure = L.Control.extend({
     $toggle = this.$toggle = $('.js-toggle', container);         // collapsed content
     this.$interaction = $('.js-interaction', container);         // expanded content
     $start = $('.js-start', container);                          // start button
+    $start2 = $('.js-start2', container);                          // start button
+    $clear = $('.js-clear', container);                          // start button
     $cancel = $('.js-cancel', container);                        // cancel button
     $finish = $('.js-finish', container);                        // finish button
+    $resetfunction = $('.js-reset', container);                        // finish button
+    this.$startAndClear = $('.js-startandclear', container);         // full area with button to start measurment
+    this.$startOnly = $('.js-startonly', container);         // full area with button to start measurment
     this.$startPrompt = $('.js-startprompt', container);         // full area with button to start measurment
     this.$measuringPrompt = $('.js-measuringprompt', container); // full area with all stuff for active measurement
     this.$startHelp = $('.js-starthelp', container);             // "Start creating a measurement by adding points"
     this.$results = $('.js-results', container);                 // div with coordinate, linear, area results
     this.$measureTasks = $('.js-measuretasks', container);       // active measure buttons container
-
+    dom.show(this.$startOnly);
+    dom.hide(this.$startAndClear);
     this._collapse();
     this._updateMeasureNotStarted();
 
@@ -96,6 +104,12 @@ L.Control.Measure = L.Control.extend({
     }
     L.DomEvent.on($start, 'click', L.DomEvent.stop);
     L.DomEvent.on($start, 'click', this._startMeasure, this);
+    L.DomEvent.on($start2, 'click', L.DomEvent.stop);
+    L.DomEvent.on($start2, 'click', this._startMeasure, this);
+    L.DomEvent.on($resetfunction, 'click', L.DomEvent.stop);
+    L.DomEvent.on($resetfunction, 'click', this._clearPoints, this);
+    L.DomEvent.on($clear, 'click', L.DomEvent.stop);
+    L.DomEvent.on($clear, 'click', this._clearPoints, this);
     L.DomEvent.on($cancel, 'click', L.DomEvent.stop);
     L.DomEvent.on($cancel, 'click', this._finishMeasure, this);
     L.DomEvent.on($finish, 'click', L.DomEvent.stop);
@@ -107,25 +121,27 @@ L.Control.Measure = L.Control.extend({
   },
   _collapse: function () {
     if (!this._locked) {
-      dom.hide(this.$interaction);
-      dom.show(this.$toggle);
+      dom.hide(this.$toggle);
+      dom.show(this.$interaction);
     }
   },
   // move between basic states:
   // measure not started, started/in progress but no points added, in progress and with points
   _updateMeasureNotStarted: function () {
     dom.hide(this.$startHelp);
-    dom.hide(this.$results);
+    dom.show(this.$results);
     dom.hide(this.$measureTasks);
     dom.hide(this.$measuringPrompt);
     dom.show(this.$startPrompt);
+    dom.hide(this.$toggle);
   },
   _updateMeasureStartedNoPoints: function () {
-    dom.hide(this.$results);
-    dom.show(this.$startHelp);
+    dom.show(this.$results);
+    dom.hide(this.$startHelp);
     dom.show(this.$measureTasks);
     dom.hide(this.$startPrompt);
     dom.show(this.$measuringPrompt);
+    dom.hide(this.$toggle);
   },
   _updateMeasureStartedWithPoints: function () {
     dom.hide(this.$startHelp);
@@ -133,11 +149,20 @@ L.Control.Measure = L.Control.extend({
     dom.show(this.$measureTasks);
     dom.hide(this.$startPrompt);
     dom.show(this.$measuringPrompt);
+    dom.hide(this.$toggle);
+  },
+  _clearPoints: function () {
+    if (featureGroup) {
+      this._map.removeLayer(featureGroup);
+      dom.show(this.$startOnly);
+      dom.hide(this.$startAndClear);
+    }
   },
   // get state vars and interface ready for measure
   _startMeasure: function () {
     this._locked = true;
-
+    this.$results.innerHTML = null;
+    this._clearPoints();
     this._map.doubleClickZoom.disable(); // double click now finishes measure
     this._map.on('mouseout', this._handleMapMouseOut, this);
 
@@ -159,11 +184,10 @@ L.Control.Measure = L.Control.extend({
   // return to state with no measure in progress, undo `this._startMeasure`
   _finishMeasure: function () {
     this._locked = false;
-
     this._map.doubleClickZoom.enable();
-    this._map.off('mouseout', this._handleMapMouseOut, this);
+    //this._map.off('mouseout', this._handleMapMouseOut, this);
 
-    L.DomEvent.off(this._container, 'mouseover', this._handleMapMouseOut, this);
+    //L.DomEvent.off(this._container, 'mouseover', this._handleMapMouseOut, this);
 
     this._clearMeasure();
 
@@ -217,9 +241,22 @@ L.Control.Measure = L.Control.extend({
     }
 
     function formatMeasure (val, unit) {
-      return unit && unit.factor && unit.display ?
-        humanize.numberFormat(val * unit.factor, unit.decimals || 0) + ' ' + unit.display :
-        humanize.numberFormat(val, 0);
+      if (unit.display==='Sq Meters') {
+        unit.display = 'm<sup>2</sup>';
+        return humanize.numberFormat(val * unit.factor, unit.decimals || 0) + ' ' + unit.display;
+      } else {
+        if (unit.display==='Meters') {
+          unit.display = 'm';
+        } else if (unit.display==='Kilometers') {
+          unit.display = 'km';
+        } else if (unit.display==='Hectares') {
+          unit.display = 'Ha';
+        }
+        return unit && unit.factor && unit.display ?
+          humanize.numberFormat(val * unit.factor, unit.decimals || 0) + ' ' + unit.display :
+          humanize.numberFormat(val, 0);
+      }
+
     }
   },
   // update results area of dom with calced measure from `this._latlngs`
@@ -302,10 +339,14 @@ L.Control.Measure = L.Control.extend({
         this._map.removeLayer(resultFeature);
       }, this);
     }
-
+    featureGroup = resultFeature;
+    dom.hide(this.$startOnly);
+    dom.show(this.$startAndClear);
     resultFeature.addTo(this._map);
-    resultFeature.bindPopup(popupContainer, this.options.popupOptions);
-    resultFeature.openPopup(resultFeature.getBounds().getCenter());
+    if (this.options.enableInfoWindows) {
+      resultFeature.bindPopup(popupContainer, this.options.popupOptions);
+      resultFeature.openPopup(resultFeature.getBounds().getCenter());
+    }
   },
   // handle map click during ongoing measurement
   // add new clicked point, update measure layers and results ui
@@ -389,7 +430,7 @@ L.Map.addInitHook(function () {
     this.measureControl = (new L.Control.Measure()).addTo(this);
   }
 });
-
+var featureGroup;
 L.control.measure = function (options) {
   return new L.Control.Measure(options);
 };

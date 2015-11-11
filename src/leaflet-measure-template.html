@@ -1,18 +1,25 @@
 <a class="<%= model.className %>-toggle js-toggle" href="#" title="Measure distances and areas">Measure</a>
 <div class="<%= model.className %>-interaction js-interaction">
   <div class="js-startprompt startprompt">
-    <h3>Measure Distances and Areas</h3>
-    <ul class="tasks">
-      <a href="#" class="js-start start">Create a new measurement</a>
-    </ul>
+    <div class="js-startandclear footerButtonSet oneButtons">
+      <button type="button" class="js-start start">Click to start measurement</button>
+      <button type="button" style="display:none" class="js-clear clear">Clear</button>
+    </div>
+
+      <div class="js-startonly footerButtonSet oneButtons">
+            <button type="button" class="js-start2 start">Click to start measurement</button>
+      </div>
+      <button style="display:none;" type="button" class="js-reset reset">Reset</button>
+
   </div>
+
+
+
   <div class="js-measuringprompt">
-    <h3>Measure Distances and Areas</h3>
-    <p class="js-starthelp">Start creating a measurement by adding points to the map</h3>
-    <div class="js-results results"></div>
-    <ul class="js-measuretasks tasks">
-      <li><a href="#" class="js-cancel cancel">Cancel</a></li>
-      <li><a href="#" class="js-finish finish">Finish Measurement</a></li>
-    </ul>
+    <div class="js-startandclear footerButtonSet twoButtons">
+      <button type="button" class="js-finish finish">Finish</button>
+      <button type="button" class="js-cancel cancel">Cancel</button>
+    </div>
   </div>
+  <div class="js-results results"></div>
 </div>
