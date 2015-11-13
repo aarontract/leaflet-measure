@@ -5417,16 +5417,16 @@ L.Control.Measure = L.Control.extend({
     //L.DomEvent.off(this._container, 'mouseover', this._handleMapMouseOut, this);
 
     this._clearMeasure();
+    if (this._measureCollector) {
+      this._measureCollector.off();
+      this._layer.removeLayer(this._measureCollector);
+      this._measureCollector = null;
+      this._layer.removeLayer(this._measureVertexes);
+      this._measureVertexes = null;
 
-    this._measureCollector.off();
-    this._layer.removeLayer(this._measureCollector);
-    this._measureCollector = null;
-
-    this._layer.removeLayer(this._measureVertexes);
-    this._measureVertexes = null;
-
-    this._updateMeasureNotStarted();
-    this._collapse();
+      this._updateMeasureNotStarted();
+      this._collapse();
+    }
   },
   // clear all running measure data
   _clearMeasure: function () {
