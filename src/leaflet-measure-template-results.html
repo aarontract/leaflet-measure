@@ -1,14 +1,18 @@
 <span class="mainHeading">Output</span>
-<% if (model.pointCount == 2 ) { %>
-<div class="group">
+<% if (model.pointCount == 2 || model.pointCount == 1) { %>
+<div class="group results-prm results-Perimeter ">
 <p><span class="heading">Length</span> <%= model.lengthDisplay %></p>
+</div>
+<div class="clearfix">
 </div>
 <% } %>
 <% if (model.pointCount > 2) { %>
-<div class="group">
+<div class="group results-prm results-Perimeter ">
 <p><span class="heading">Perimeter</span> <%= model.lengthDisplay %></p>
 </div>
-<div class="group">
+<div class="group results-prm results-Area">
 <p><span class="heading">Area</span> <%= model.areaDisplay %></p>
+</div>
+<div class="clearfix">
 </div>
 <% } %>

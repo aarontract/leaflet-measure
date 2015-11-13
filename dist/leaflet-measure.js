@@ -5234,8 +5234,8 @@ var $ = dom.$;
 var Symbology = require('./mapsymbology');
 
 
-var controlTemplate = _.template("<div class=\"Measure_howTo\">Start creating a measurement by adding points to the map, when you have finished double click on the final point or click finish.</div>\r\n\r\n<a class=\"<%= model.className %>-toggle js-toggle\" href=\"#\" title=\"Measure distances and areas\">Measure</a>\r\n<div class=\"<%= model.className %>-interaction js-interaction\">\r\n  <div class=\"js-startprompt startprompt\">\r\n    <div class=\"js-startandclear footerButtonSet oneButtons\">\r\n      <button type=\"button\" class=\"js-start start\">Click to start measurement</button>\r\n      <button type=\"button\" style=\"display:none\" class=\"js-clear clear\">Clear</button>\r\n    </div>\r\n\r\n      <div class=\"js-startonly footerButtonSet oneButtons\">\r\n            <button type=\"button\" class=\"js-start2 start\">Click to start measurement</button>\r\n      </div>\r\n      <button style=\"display:none;\" type=\"button\" class=\"js-reset reset\">Reset</button>\r\n\r\n  </div>\r\n\r\n\r\n\r\n  <div class=\"js-measuringprompt\">\r\n    <div class=\"js-startandclear footerButtonSet twoButtons\">\r\n      <button type=\"button\" class=\"js-finish finish\">Finish</button>\r\n      <button type=\"button\" class=\"js-cancel cancel\">Cancel</button>\r\n    </div>\r\n  </div>\r\n  <div class=\"js-results results\"></div>\r\n</div>\r\n");
-var resultsTemplate = _.template("<span class=\"mainHeading\">Output</span>\r\n<% if (model.pointCount == 2 ) { %>\r\n<div class=\"group\">\r\n<p><span class=\"heading\">Length</span> <%= model.lengthDisplay %></p>\r\n</div>\r\n<% } %>\r\n<% if (model.pointCount > 2) { %>\r\n<div class=\"group\">\r\n<p><span class=\"heading\">Perimeter</span> <%= model.lengthDisplay %></p>\r\n</div>\r\n<div class=\"group\">\r\n<p><span class=\"heading\">Area</span> <%= model.areaDisplay %></p>\r\n</div>\r\n<% } %>");
+var controlTemplate = _.template("<a class=\"<%= model.className %>-toggle js-toggle\" href=\"#\" title=\"Measure distances and areas\">Measure</a>\r\n<div class=\"<%= model.className %>-interaction js-interaction\">\r\n  <div class=\"js-results results\"></div>\r\n  <div class=\"js-startprompt startprompt\">\r\n    <div class=\"js-startandclear footerButtonSet oneButtons\">\r\n      <button type=\"button\" class=\"js-start start\">Click to start measurement</button>\r\n      <button type=\"button\" style=\"display:none\" class=\"js-clear clear\">Clear</button>\r\n    </div>\r\n\r\n      <div class=\"js-startonly footerButtonSet oneButtons\">\r\n            <button type=\"button\" class=\"js-start2 start\">Click to start measurement</button>\r\n      </div>\r\n      <button style=\"display:none;\" type=\"button\" class=\"js-reset reset\">Reset</button>\r\n\r\n  </div>\r\n\r\n\r\n\r\n  <div class=\"js-measuringprompt\">\r\n    <div class=\"js-startandclear footerButtonSet twoButtons\">\r\n      <button type=\"button\" class=\"js-finish finish\">Finish</button>\r\n      <button type=\"button\" class=\"js-cancel cancel\">Cancel</button>\r\n    </div>\r\n  </div>\r\n</div>\r\n");
+var resultsTemplate = _.template("<span class=\"mainHeading\">Output</span>\r\n<% if (model.pointCount == 2 || model.pointCount == 1) { %>\r\n<div class=\"group results-prm results-Perimeter \">\r\n<p><span class=\"heading\">Length</span> <%= model.lengthDisplay %></p>\r\n</div>\r\n<div class=\"clearfix\">\r\n</div>\r\n<% } %>\r\n<% if (model.pointCount > 2) { %>\r\n<div class=\"group results-prm results-Perimeter \">\r\n<p><span class=\"heading\">Perimeter</span> <%= model.lengthDisplay %></p>\r\n</div>\r\n<div class=\"group results-prm results-Area\">\r\n<p><span class=\"heading\">Area</span> <%= model.areaDisplay %></p>\r\n</div>\r\n<div class=\"clearfix\">\r\n</div>\r\n<% } %>\r\n");
 var pointPopupTemplate = _.template("");
 var linePopupTemplate = _.template("<h3>Linear Measurement</h3>\r\n<p><%= model.lengthDisplay %></p>\r\n<ul class=\"tasks\" style=\"display:none\">\r\n  <li><a href=\"#\" class=\"js-zoomto zoomto\">Center on this Line</a></li>\r\n  <li><a href=\"#\" class=\"js-deletemarkup deletemarkup\">Delete</a></li>\r\n</ul>");
 var areaPopupTemplate = _.template("<h3>Area Measurement</h3>\r\n<p><%= model.areaDisplay %></p>\r\n<p><%= model.lengthDisplay %> Perimeter</p>\r\n<ul class=\"tasks\" style=\"display:none\">\r\n  <li><a href=\"#\" class=\"js-zoomto zoomto\">Center on this Area</a></li>\r\n  <li><a href=\"#\" class=\"js-deletemarkup deletemarkup\">Delete</a></li>\r\n</ul>");
@@ -5333,6 +5333,7 @@ L.Control.Measure = L.Control.extend({
     L.DomEvent.on($clear, 'click', L.DomEvent.stop);
     L.DomEvent.on($clear, 'click', this._clearPoints, this);
     L.DomEvent.on($cancel, 'click', L.DomEvent.stop);
+    L.DomEvent.on($cancel, 'click', this._clearOutput, this);
     L.DomEvent.on($cancel, 'click', this._finishMeasure, this);
     L.DomEvent.on($finish, 'click', L.DomEvent.stop);
     L.DomEvent.on($finish, 'click', this._handleMeasureDoubleClick, this);
@@ -5375,15 +5376,19 @@ L.Control.Measure = L.Control.extend({
   },
   _clearPoints: function () {
     if (featureGroup) {
+      this._clearOutput();
       this._map.removeLayer(featureGroup);
       dom.show(this.$startOnly);
       dom.hide(this.$startAndClear);
     }
   },
+  _clearOutput: function () {
+    this.$results.innerHTML = '<div class="group results-prm results-Perimeter "><p><span class="heading">Perimeter</span> - </p></div><div class="group results-prm results-Area"><p><span class="heading">Area</span> - </p></div><div class="clearfix"></div>';
+  },
   // get state vars and interface ready for measure
   _startMeasure: function () {
     this._locked = true;
-    this.$results.innerHTML = null;
+    this.$results.innerHTML = '<div class="group results-prm results-Perimeter "><p><span class="heading">Perimeter</span> - </p></div><div class="group results-prm results-Area"><p><span class="heading">Area</span> - </p></div><div class="clearfix"></div>';
     this._clearPoints();
     this._map.doubleClickZoom.disable(); // double click now finishes measure
     this._map.on('mouseout', this._handleMapMouseOut, this);
@@ -5426,7 +5431,10 @@ L.Control.Measure = L.Control.extend({
   // clear all running measure data
   _clearMeasure: function () {
     this._latlngs = [];
-    this._measureVertexes.clearLayers();
+    if (this._measureVertexes) {
+      this._measureVertexes.clearLayers();
+    }
+
     if (this._measureDrag) {
       this._layer.removeLayer(this._measureDrag);
     }
@@ -5444,11 +5452,20 @@ L.Control.Measure = L.Control.extend({
   _getMeasurementDisplayStrings: function (measurement) {
     var unitDefinitions = this.options.units;
 
-    return {
-      lengthDisplay: buildDisplay(measurement.length, this.options.primaryLengthUnit, this.options.secondaryLengthUnit),
-      areaDisplay: buildDisplay(measurement.area, this.options.primaryAreaUnit, this.options.secondaryAreaUnit)
-    };
+    var lengthUnits = this.options.primaryLengthUnit;
+    var areaUnits = this.options.primaryAreaUnit;
+    if (measurement.length >= 1000) {
+      lengthUnits = this.options.secondaryLengthUnit;
+    }
 
+    if (measurement.area >=10000) {
+      areaUnits = this.options.secondaryAreaUnit;
+    }
+
+    return {
+      lengthDisplay: buildDisplay(measurement.length, lengthUnits),
+      areaDisplay: buildDisplay(measurement.area, areaUnits)
+    };
     function buildDisplay (val, primaryUnit, secondaryUnit) {
       var display;
       if (primaryUnit && unitDefinitions[primaryUnit]) {
